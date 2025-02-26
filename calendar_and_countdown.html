@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar & Countdown</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --container-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #e0e4e8;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #000000;
+            --container-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --border-color: #2d2d2d;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            padding: 40px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.3s ease;
+        }
+
+        /* Theme Toggle Styles */
+        .theme-toggle {
+            position: absolute;
+            top: 30px;
+            right: 60px;
+            width: 80px;
+            height: 40px;
+            background: #e0e0e0;
+            border-radius: 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle::before {
+            content: '';
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle.dark {
+            background: #333;
+        }
+
+        .theme-toggle.dark::before {
+            transform: translateX(40px);
+        }
+
+        .theme-toggle .icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .theme-toggle .sun {
+            left: 8px;
+            opacity: 1;
+        }
+
+        .theme-toggle .moon {
+            right: 8px;
+            opacity: 0;
+        }
+
+        .theme-toggle.dark .sun { opacity: 0; }
+        .theme-toggle.dark .moon { opacity: 1; }
+
+        /* Countdown Styles */
+        .countdown-container {
+            width: 280px;
+            height: 280px;
+            perspective: 2000px;
+            cursor: pointer;
+            margin: 40px auto;
+        }
+
+        .countdown-flip-card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .countdown-container.flipped .countdown-flip-card {
+            transform: rotateY(180deg);
+        }
+
+        .countdown-front, .countdown-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background: var(--container-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+            box-sizing: border-box;
+        }
+
+        .countdown-back {
+            transform: rotateY(180deg);
+        }
+
+        .countdown-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .countdown-number {
+            font-size: 64px;
+            font-weight: 600;
+            color: #4a90e2;
+            line-height: 1;
+            margin-bottom: 24px;
+        }
+
+        .countdown-details {
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        /* Calendar Styles */
+        .calendar-container {
+            background: var(--container-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 6px var(--shadow-color);
+            padding: 20px;
+            width: 330px;
+            margin: 20px auto;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .calendar-nav {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+        }
+
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.7;
+            margin-bottom: 10px;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .calendar-day {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .calendar-day.highlighted {
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        .calendar-day.mock {
+            background-color: #9c27b0;
+            color: white;
+        }
+
+        .calendar-day.current {
+            background-color: #2ecc71;
+            color: white;
+            border: 2px solid #27ae60;
+        }
+
+        .calendar-day.disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle" id="themeToggle">
+        <span class="icon sun">☀️</span>
+        <span class="icon moon">🌙</span>
+    </div>
+
+    <div class="countdown-container" onclick="flipCard()">
+        <div class="countdown-flip-card">
+            <div class="countdown-front">
+                <h2 class="countdown-title">Boards</h2>
+                <div class="countdown-number" id="daysLeft">--</div>
+                <div class="countdown-details" id="timeDetails">-- hours -- minutes remaining</div>
+            </div>
+            <div class="countdown-back">
+                <h2 class="countdown-title">Mock Exam</h2>
+                <div class="countdown-number" id="mockDaysLeft">--</div>
+                <div class="countdown-details" id="mockTimeDetails">-- hours -- minutes remaining</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <button class="calendar-nav" onclick="changeMonth(-1)">‹</button>
+            <h2 class="calendar-title" id="calendarTitle"></h2>
+            <button class="calendar-nav" onclick="changeMonth(1)">›</button>
+        </div>
+        <div class="calendar-weekdays">
+            <span>SUN</span>
+            <span>MON</span>
+            <span>TUE</span>
+            <span>WED</span>
+            <span>THU</span>
+            <span>FRI</span>
+            <span>SAT</span>
+        </div>
+        <div class="calendar-days" id="calendarDays"></div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('theme');
+        
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') themeToggle.classList.add('dark');
+        }
+
+        themeToggle.addEventListener('click', function() {
+            this.classList.toggle('dark');
+            const isDark = this.classList.contains('dark');
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Countdown
+        function updateCountdown() {
+            const finalDate = new Date('2025-04-29T00:00:00');
+            const mockDate = new Date('2025-03-16T00:00:00');
+            const now = new Date();
+            
+            const finalDiff = finalDate - now;
+            const mockDiff = mockDate - now;
+            
+            const getFinalDays = Math.floor(finalDiff / (1000 * 60 * 60 * 24));
+            const getFinalHours = Math.floor((finalDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const getFinalMinutes = Math.floor((finalDiff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            const getMockDays = Math.floor(mockDiff / (1000 * 60 * 60 * 24));
+            const getMockHours = Math.floor((mockDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const getMockMinutes = Math.floor((mockDiff % (1000 * 60 * 60)) / (1000 * 60));
+
+            document.getElementById('daysLeft').textContent = getFinalDays;
+            document.getElementById('timeDetails').textContent = 
+                `${getFinalHours} hours ${getFinalMinutes} minutes remaining`;
+
+            document.getElementById('mockDaysLeft').textContent = getMockDays;
+            document.getElementById('mockTimeDetails').textContent = 
+                `${getMockHours} hours ${getMockMinutes} minutes remaining`;
+        }
+
+        function flipCard() {
+            document.querySelector('.countdown-container').classList.toggle('flipped');
+        }
+
+        // Calendar
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+
+        const importantDates = [
+            { 
+                date: new Date(2025, 2, 16),
+                type: 'mock',
+                details: 'Mock Exam Start'
+            },
+            // Add more dates as needed
+        ];
+
+        function generateCalendar(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startingDay = firstDay.getDay();
+            const monthLength = lastDay.getDate();
+            
+            document.getElementById('calendarTitle').textContent = 
+                new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long' })
+                    .format(new Date(year, month));
+            
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+
+            // Empty cells
+            for (let i = 0; i < startingDay; i++) {
+                calendarDays.appendChild(createDayElement('', true));
+            }
+
+            // Days
+            for (let i = 1; i <= monthLength; i++) {
+                const dayElement = createDayElement(i);
+                const currentDateString = new Date(year, month, i).toDateString();
+                
+                if (new Date().toDateString() === currentDateString) {
+                    dayElement.classList.add('current');
+                }
+
+                const importantDate = importantDates.find(date => 
+                    date.date.toDateString() === currentDateString
+                );
+                
+                if (importantDate) {
+                    dayElement.classList.add(importantDate.type);
+                }
+
+                calendarDays.appendChild(dayElement);
+            }
+        }
+
+        function createDayElement(content, disabled = false) {
+            const element = document.createElement('div');
+            element.className = `calendar-day${disabled ? ' disabled' : ''}`;
+            element.textContent = content;
+            return element;
+        }
+
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            generateCalendar(currentYear, currentMonth);
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            generateCalendar(currentYear, currentMonth);
+            updateCountdown();
+            setInterval(updateCountdown, 60000);
+        });
+    </script>
+</body>
+</html> 
