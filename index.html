@@ -819,8 +819,12 @@
             font-size: 16px;
             transition: all 0.3s ease;
             position: relative;
-            width: fit-content;  /* Make the text container fit its content */
-            display: inline-block;  /* Allow the text to be inline but maintain block properties */
+            width: fit-content;
+            display: inline-block;
+            max-width: calc(100% - 60px); /* Leave space for checkbox and delete button */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .todo-text::after {
@@ -1087,7 +1091,7 @@
             const productivity = document.getElementById('productivity').value;
             const description = document.getElementById('description').value;
 
-            const url = 'https://script.google.com/macros/s/AKfycbxUW8cDtayHEOtXMZKwqBcGKrvlyle7TB7Vs-TJHCIpX9ILxI7TWJsYcEupeBju6E5DHQ/exec';
+            const url = 'https://script.google.com/macros/s/AKfycbz6lJC-RrXJKh5IbZcWL1wWNH_O644jygNLudCE_Mf_EsGUAbuJNDXPCqTUWHubuvGhGw/exec';
 
             try {
                 showLoading('Saving data...');
@@ -1134,13 +1138,17 @@
                     datasets: [{
                         data: [],
                         borderColor: canvasId === 'hoursChart' ? '#4CAF50' : '#2196F3',
-                        tension: 0.4
+                        tension: 0.4,
+                        descriptions: [],
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: canvasId === 'hoursChart' ? '#4CAF50' : '#2196F3'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false,  // No animation for initial grid
+                    animation: false,
                     plugins: {
                         legend: {
                             display: false
@@ -1155,7 +1163,63 @@
                             padding: {
                                 bottom: 20
                             }
+                        },
+                        tooltip: {
+                            enabled: true,
+                            mode: 'point',
+                            intersect: true,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    return canvasId === 'hoursChart' ? `${value} hours` : `Rating: ${value}`;
+                                },
+                                afterLabel: function(context) {
+                                    const description = context.dataset.descriptions[context.dataIndex];
+                                    return description && description !== 'No description' ? description : '';
+                                }
+                            },
+                            backgroundColor: 'var(--card-background)',
+                            titleColor: 'var(--text-color)',
+                            bodyColor: 'var(--text-color)',
+                            borderColor: 'var(--border-color)',
+                            borderWidth: 1,
+                            padding: {
+                                top: 12,
+                                right: 15,
+                                bottom: 12,
+                                left: 15
+                            },
+                            displayColors: false,
+                            titleFont: {
+                                size: 14,
+                                weight: '600',
+                                family: "'Inter', sans-serif"
+                            },
+                            bodyFont: {
+                                size: 13,
+                                weight: '400',
+                                family: "'Inter', sans-serif",
+                                lineHeight: 1.4
+                            },
+                            bodySpacing: 8,
+                            boxPadding: 6,
+                            cornerRadius: 8,
+                            textDirection: 'ltr',
+                            multiKeyBackground: 'transparent',
+                            maxWidth: 300,
+                            titleSpacing: 10
                         }
+                    },
+                    hover: {
+                        mode: 'point',
+                        intersect: true
+                    },
+                    interaction: {
+                        mode: 'point',
+                        intersect: true
                     },
                     scales: {
                         x: {
@@ -1208,7 +1272,7 @@
 
         // Update the fetchAndUpdateCharts function
         async function fetchAndUpdateCharts(showLoadingIndicator = false) {
-            const url = 'https://script.google.com/macros/s/AKfycbxUW8cDtayHEOtXMZKwqBcGKrvlyle7TB7Vs-TJHCIpX9ILxI7TWJsYcEupeBju6E5DHQ/exec';
+            const url = 'https://script.google.com/macros/s/AKfycbz6lJC-RrXJKh5IbZcWL1wWNH_O644jygNLudCE_Mf_EsGUAbuJNDXPCqTUWHubuvGhGw/exec';
             
             try {
                 if (showLoadingIndicator) {
@@ -1225,8 +1289,9 @@
                 });
                 const hours = data.map(row => row[1]);
                 const productivity = data.map(row => row[2]);
+                const descriptions = data.map(row => row[3] || 'No description');
 
-                // Update existing charts with data
+                // Update hours chart
                 hoursChart.data.labels = dates;
                 hoursChart.data.datasets[0] = {
                     label: 'Study Hours',
@@ -1235,13 +1300,41 @@
                     backgroundColor: 'rgba(76, 195, 80, 0.15)',
                     fill: true,
                     pointBackgroundColor: '#4CAF50',
-                    tension: 0.4
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.4,
+                    descriptions: descriptions
                 };
                 hoursChart.options.animation = {
-                    duration: 1500
+                    y: {
+                        from: 1000
+                    },
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                };
+                hoursChart.options.plugins.tooltip = {
+                    enabled: true,
+                    mode: 'point',
+                    intersect: true,
+                    callbacks: {
+                        afterLabel: function(context) {
+                            return context.dataset.descriptions[context.dataIndex];
+                        }
+                    },
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    titleColor: '#333',
+                    bodyColor: '#333',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: false,
+                    bodyFont: {
+                        size: 14
+                    }
                 };
                 hoursChart.update();
 
+                // Update productivity chart
                 productivityChart.data.labels = dates;
                 productivityChart.data.datasets[0] = {
                     label: 'Productivity Rating',
@@ -1250,10 +1343,37 @@
                     backgroundColor: 'rgba(33, 150, 243, 0.1)',
                     fill: true,
                     pointBackgroundColor: '#2196F3',
-                    tension: 0.4
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.4,
+                    descriptions: descriptions
                 };
                 productivityChart.options.animation = {
-                    duration: 1500
+                    y: {
+                        from: 1000
+                    },
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                };
+                productivityChart.options.plugins.tooltip = {
+                    enabled: true,
+                    mode: 'point',
+                    intersect: true,
+                    callbacks: {
+                        afterLabel: function(context) {
+                            return context.dataset.descriptions[context.dataIndex];
+                        }
+                    },
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    titleColor: '#333',
+                    bodyColor: '#333',
+                    borderColor: '#ddd',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: false,
+                    bodyFont: {
+                        size: 14
+                    }
                 };
                 productivityChart.update();
 
@@ -1585,57 +1705,52 @@
                 const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=3&aqi=yes`;
                 
                 const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Weather API request failed');
+                }
+                
                 const data = await response.json();
                 
                 if (data.current && data.forecast) {
-                    // Update weather data
+                    // Update main weather info
                     document.getElementById('weatherTemp').textContent = `${Math.round(data.current.temp_c)}°C`;
                     document.getElementById('weatherFeelsLike').textContent = `Feels like: ${Math.round(data.current.feelslike_c)}°C`;
                     document.getElementById('weatherDesc').textContent = data.current.condition.text;
+                    
+                    // Update weather details
                     document.getElementById('weatherHumidity').textContent = `${data.current.humidity}%`;
                     document.getElementById('weatherWind').textContent = `${Math.round(data.current.wind_kph)} km/h`;
                     document.getElementById('weatherPrecip').textContent = `${data.current.precip_mm} mm`;
-                    document.getElementById('weatherUV').textContent = `UV: ${data.current.uv}`;
-                    document.getElementById('weatherUpdated').textContent = `Last updated: ${data.current.last_updated.split(' ')[1]}`;
+                    document.getElementById('weatherUV').textContent = `UV: ${Math.round(data.current.uv)}`;
                     
-                    // Set appropriate weather icon
+                    // Update last updated time
+                    const lastUpdated = new Date(data.current.last_updated);
+                    document.getElementById('weatherUpdated').textContent = 
+                        `Last updated: ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                    
+                    // Set weather icon based on condition and time of day
                     const isDay = data.current.is_day;
                     const condition = data.current.condition.text.toLowerCase();
-                    let weatherIcon = '⛅'; // Default icon
-                    
-                    if (condition.includes('thunder')) {
-                        weatherIcon = '⛈️'; // Thunderstorm
-                    } else if (condition.includes('drizzle')) {
-                        weatherIcon = '🌧️'; // Drizzle
-                    } else if (condition.includes('rain')) {
-                        weatherIcon = '🌧️'; // Rain
-                    } else if (condition.includes('snow')) {
-                        weatherIcon = '❄️'; // Snow
-                    } else if (condition.includes('mist') || condition.includes('fog')) {
-                        weatherIcon = '🌫️'; // Atmosphere (fog, mist)
-                    } else if (condition.includes('clear') || condition.includes('sunny')) {
-                        weatherIcon = isDay ? '☀️' : '🌙'; // Clear/Sunny
-                    } else if (condition.includes('cloud') || condition.includes('overcast')) {
-                        weatherIcon = '☁️'; // Clouds
-                    }
-                    
-                    document.getElementById('weatherIcon').textContent = weatherIcon;
+                    document.getElementById('weatherIcon').textContent = getWeatherIcon(condition, isDay);
 
-                    // Add forecast information
+                    // Update forecast section
                     const forecastDays = data.forecast.forecastday;
-                    const forecastHTML = forecastDays.map(day => `
-                        <div class="forecast-day">
-                            <div class="forecast-date">${new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-                            <div class="forecast-temp">
-                                <span class="high">${Math.round(day.day.maxtemp_c)}°</span>
-                                <span class="low">${Math.round(day.day.mintemp_c)}°</span>
+                    const forecastHTML = forecastDays.map(day => {
+                        const date = new Date(day.date);
+                        return `
+                            <div class="forecast-day">
+                                <div class="forecast-date">${date.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                                <div class="forecast-temp">
+                                    <span class="high">${Math.round(day.day.maxtemp_c)}°</span>
+                                    <span class="low">${Math.round(day.day.mintemp_c)}°</span>
+                                </div>
+                                <div class="forecast-icon">${getWeatherIcon(day.day.condition.text.toLowerCase(), true)}</div>
+                                <div class="forecast-rain">${day.day.daily_chance_of_rain}% rain</div>
                             </div>
-                            <div class="forecast-icon">${getWeatherIcon(day.day.condition.text.toLowerCase(), true)}</div>
-                            <div class="forecast-rain">${day.day.daily_chance_of_rain}%</div>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
 
-                    // Add this HTML element to show forecasts
+                    // Update or create forecast section
                     const existingForecast = document.querySelector('.weather-forecast');
                     if (existingForecast) {
                         existingForecast.remove();
@@ -1646,18 +1761,32 @@
                         </div>
                     `);
                 } else {
-                    document.getElementById('weatherDesc').textContent = 'Weather data unavailable';
+                    throw new Error('Invalid weather data format');
                 }
             } catch (error) {
                 console.error('Error fetching weather:', error);
+                document.getElementById('weatherTemp').textContent = '--°C';
+                document.getElementById('weatherFeelsLike').textContent = 'Feels like: --°C';
                 document.getElementById('weatherDesc').textContent = 'Weather data unavailable';
+                document.getElementById('weatherHumidity').textContent = '--%';
+                document.getElementById('weatherWind').textContent = '-- km/h';
+                document.getElementById('weatherPrecip').textContent = '-- mm';
+                document.getElementById('weatherUV').textContent = 'UV: --';
+                document.getElementById('weatherUpdated').textContent = 'Last updated: --';
+                document.getElementById('weatherIcon').textContent = '⛅';
+                
+                // Remove forecast if it exists
+                const existingForecast = document.querySelector('.weather-forecast');
+                if (existingForecast) {
+                    existingForecast.remove();
+                }
             }
         }
         
-        // Helper function to get weather icons
         function getWeatherIcon(condition, isDay) {
             if (condition.includes('thunder')) return '⛈️';
-            if (condition.includes('drizzle') || condition.includes('rain')) return '🌧️';
+            if (condition.includes('drizzle')) return '🌧️';
+            if (condition.includes('rain')) return '🌧️';
             if (condition.includes('snow')) return '❄️';
             if (condition.includes('mist') || condition.includes('fog')) return '🌫️';
             if (condition.includes('clear') || condition.includes('sunny')) return isDay ? '☀️' : '🌙';
@@ -1674,10 +1803,72 @@
         // Todo List Functionality
         class TodoList {
             constructor() {
-                this.todos = JSON.parse(localStorage.getItem('subjectTodos')) || {};
+                this.todos = {};
                 this.currentSubject = 'physics';
                 this.setupEventListeners();
-                this.renderTodoCard();
+                this.fetchTodos();
+            }
+
+            async fetchTodos() {
+                try {
+                    const url = 'https://script.google.com/macros/s/AKfycbz6lJC-RrXJKh5IbZcWL1wWNH_O644jygNLudCE_Mf_EsGUAbuJNDXPCqTUWHubuvGhGw/exec?type=todos';
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    // Convert the data into our todos structure
+                    this.todos = {};
+                    data.forEach(item => {
+                        if (!this.todos[item.subject]) {
+                            this.todos[item.subject] = [];
+                        }
+                        this.todos[item.subject].push({
+                            id: item.id,
+                            text: item.text,
+                            completed: item.completed === true || item.completed === 'TRUE' || item.completed === 'true'
+                        });
+                    });
+                    
+                    this.renderTodoCard();
+                } catch (error) {
+                    console.error('Error fetching todos:', error);
+                }
+            }
+
+            async saveTodosToSheet() {
+                try {
+                    showLoading('Saving todos...');
+                    const url = 'https://script.google.com/macros/s/AKfycbz6lJC-RrXJKh5IbZcWL1wWNH_O644jygNLudCE_Mf_EsGUAbuJNDXPCqTUWHubuvGhGw/exec';
+                    
+                    // Prepare todos data for all subjects
+                    const allTodos = [];
+                    for (const subject in this.todos) {
+                        this.todos[subject].forEach(todo => {
+                            allTodos.push({
+                                id: todo.id,
+                                subject: subject,
+                                text: todo.text,
+                                completed: todo.completed
+                            });
+                        });
+                    }
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', url, true);
+                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    
+                    xhr.onreadystatechange = () => {
+                        if (xhr.readyState === 4) {
+                            hideLoading();
+                        }
+                    };
+
+                    const formData = `type=todos&data=${encodeURIComponent(JSON.stringify(allTodos))}`;
+                    xhr.send(formData);
+
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error saving todos:', error);
+                }
             }
 
             setupEventListeners() {
@@ -1694,7 +1885,6 @@
                     this.addTodo(todoInput.value);
                 });
                 
-                // Setup subject list click handlers
                 const subjectItems = document.querySelectorAll('.subject-item');
                 subjectItems.forEach(item => {
                     item.addEventListener('click', () => {
@@ -1719,75 +1909,84 @@
                 return titles[subject] || subject.charAt(0).toUpperCase() + subject.slice(1);
             }
 
-            addTodo(text) {
+            async addTodo(text) {
                 const todoInput = document.getElementById('newTodoInput');
 
                 if (text && text.trim()) {
                     if (!this.todos[this.currentSubject]) {
                         this.todos[this.currentSubject] = [];
                     }
-                    this.todos[this.currentSubject].push({
+                    
+                    const newTodo = {
                         id: Date.now(),
                         text: text.trim(),
                         completed: false
-                    });
-                    this.saveTodos();
+                    };
+                    
+                    this.todos[this.currentSubject].push(newTodo);
+                    await this.saveTodosToSheet();
                     this.renderTodoCard();
                     todoInput.value = '';
                 }
             }
 
-            toggleTodo(id) {
+            async toggleTodo(id) {
                 const todo = this.todos[this.currentSubject].find(t => t.id === id);
                 if (todo) {
-                    // Find the todo item element
                     const todoItem = document.querySelector(`.todo-item[data-id="${id}"]`);
                     if (todoItem) {
-                        // Remove any existing animation classes
                         todoItem.classList.remove('striking', 'unstriking');
-                        // Add the appropriate animation class
                         todoItem.classList.add(todo.completed ? 'unstriking' : 'striking');
                         
-                        // Wait for animation to complete before updating state
-                        setTimeout(() => {
+                        setTimeout(async () => {
                             todo.completed = !todo.completed;
-                            this.saveTodos();
+                            await this.saveTodosToSheet();
                             this.renderTodoCard();
-                        }, 300); // Match animation duration
+                        }, 300);
                     }
                 }
             }
 
-            deleteTodo(id) {
+            async deleteTodo(id) {
                 this.todos[this.currentSubject] = this.todos[this.currentSubject].filter(t => t.id !== id);
-                this.saveTodos();
+                await this.saveTodosToSheet();
                 this.renderTodoCard();
-            }
-
-            saveTodos() {
-                localStorage.setItem('subjectTodos', JSON.stringify(this.todos));
             }
 
             renderTodoCard() {
                 const container = document.querySelector('.todo-cards-container');
                 const todos = this.todos[this.currentSubject] || [];
                 
-                const list = document.createElement('ul');
-                list.className = 'todo-list';
-
                 if (todos.length === 0) {
                     container.innerHTML = `<div class="empty-todo-message">No tasks yet</div>`;
                 } else {
                     container.innerHTML = '';
-                    todos.forEach(todo => {
+                    const list = document.createElement('ul');
+                    list.className = 'todo-list';
+                    
+                    // Sort todos to show uncompleted first
+                    const sortedTodos = [...todos].sort((a, b) => {
+                        if (a.completed === b.completed) return 0;
+                        return a.completed ? 1 : -1;
+                    });
+                    
+                    sortedTodos.forEach(todo => {
                         const li = document.createElement('li');
-                        li.className = `todo-item${todo.completed ? ' completed' : ''}`;
-                        li.dataset.id = todo.id; // Add data-id attribute
+                        li.className = `todo-item${todo.completed ? ' completed striking' : ''}`;
+                        li.dataset.id = todo.id;
                         li.innerHTML = `
                             <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
                             <span class="todo-text">${todo.text}</span>
                             <span class="delete-todo"><i class="fas fa-times"></i></span>
                         `;
+
+                        // If it's completed by default, ensure the strikethrough is visible
+                        if (todo.completed) {
+                            setTimeout(() => {
+                                li.classList.remove('striking');
+                                li.classList.add('completed');
+                            }, 300);
+                        }
 
                         const checkbox = li.querySelector('.todo-checkbox');
                         checkbox.addEventListener('change', () => this.toggleTodo(todo.id));

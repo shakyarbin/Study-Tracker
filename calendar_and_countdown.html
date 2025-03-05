@@ -210,14 +210,19 @@
         }
 
         .calendar-day {
+            position: relative;
             width: 32px;
             height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 14px;
-            border-radius: 50%;
             cursor: pointer;
+            border-radius: 50%;
+            color: var(--text-color);
+            transition: all 0.2s;
+            margin: 0;
+            background: none;
         }
 
         .calendar-day.highlighted {
@@ -239,6 +244,44 @@
         .calendar-day.disabled {
             opacity: 0.3;
             cursor: default;
+        }
+
+        .date-tooltip {
+            position: absolute;
+            background: var(--container-bg);
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            width: max-content;
+            max-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: left;
+            border: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-color);
+            pointer-events: none;
+            transition: opacity 0.2s, visibility 0.2s;
+            white-space: nowrap;
+        }
+
+        .date-tooltip div {
+            margin: 4px 0;
+            white-space: nowrap;
+        }
+
+        .date-tooltip div:not(:last-child) {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 4px;
+        }
+
+        .calendar-day:hover .date-tooltip {
+            opacity: 1;
+            visibility: visible;
         }
     </style>
 </head>
@@ -334,12 +377,116 @@
         let currentYear = currentDate.getFullYear();
 
         const importantDates = [
+            // Mock Exam Period
             { 
-                date: new Date(2025, 2, 16),
-                type: 'mock',
-                details: 'Mock Exam Start'
+                date: new Date(2025, 2, 17),
+                type: 'exam',
+                subject: 'Maths P32',
+                details: 'Mock Exam'
             },
-            // Add more dates as needed
+            { 
+                date: new Date(2025, 2, 17),
+                type: 'exam',
+                subject: 'Maths P42',
+                details: 'Mock Exam'
+            },
+            { 
+                date: new Date(2025, 2, 23),
+                type: 'exam',
+                subject: 'Computer 42',
+                details: 'Mock Exam'
+            },
+            { 
+                date: new Date(2025, 2, 24),
+                type: 'exam',
+                subject: 'Computer P32',
+                details: 'Mock Exam'
+            },
+            { 
+                date: new Date(2025, 2, 27),
+                type: 'exam',
+                subject: 'Chemistry P42',
+                details: 'Mock Exam'
+            },
+            { 
+                date: new Date(2025, 2, 27),
+                type: 'exam',
+                subject: 'Chemistry P52',
+                details: 'Mock Exam'
+            },
+            { 
+                date: new Date(2025, 2, 28),
+                type: 'exam',
+                subject: 'EGP P12',
+                details: 'Mock Exam End'
+            },
+            { 
+                date: new Date(2025, 2, 28),
+                type: 'exam',
+                subject: 'EGP P22',
+                details: 'Mock Exam End'
+            },
+            // Final Exams
+            { 
+                date: new Date(2025, 3, 29),
+                type: 'exam',
+                subject: 'EGP',
+                details: 'EGP P1'
+            },
+            {
+                date: new Date(2025, 4, 5),
+                type: 'exam',
+                subject: 'EGP',
+                details: 'EGP P2'
+            },
+            {
+                date: new Date(2025, 4, 7),
+                type: 'exam',
+                subject: 'Mathematics',
+                details: 'Maths P4'
+            },
+            {
+                date: new Date(2025, 4, 9),
+                type: 'exam',
+                subject: 'Chemistry',
+                details: 'Chemistry P4'
+            },
+            {
+                date: new Date(2025, 4, 9),
+                type: 'exam',
+                subject: 'Physics',
+                details: 'Physics P4'
+            },
+            {
+                date: new Date(2025, 4, 19),
+                type: 'exam',
+                subject: 'Chemistry',
+                details: 'Chemistry P5'
+            },
+            {
+                date: new Date(2025, 4, 19),
+                type: 'exam',
+                subject: 'Mathematics',
+                details: 'Maths P3'
+            },
+            {
+                date: new Date(2025, 4, 20),
+                type: 'exam',
+                subject: 'Physics',
+                details: 'Physics P5'
+            },
+            {
+                date: new Date(2025, 4, 21),
+                type: 'exam',
+                subject: 'Computer Science',
+                details: 'Computer P3'
+            },
+            {
+                date: new Date(2025, 4, 23),
+                type: 'exam',
+                subject: 'Computer Science',
+                details: 'Computer P4'
+            }
         ];
 
         function generateCalendar(year, month) {
@@ -357,12 +504,17 @@
 
             // Empty cells
             for (let i = 0; i < startingDay; i++) {
-                calendarDays.appendChild(createDayElement('', true));
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day disabled';
+                calendarDays.appendChild(emptyDay);
             }
 
             // Days
             for (let i = 1; i <= monthLength; i++) {
-                const dayElement = createDayElement(i);
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                dayElement.textContent = i;
+
                 const currentDateString = new Date(year, month, i).toDateString();
                 
                 if (new Date().toDateString() === currentDateString) {
@@ -374,18 +526,33 @@
                 );
                 
                 if (importantDate) {
-                    dayElement.classList.add(importantDate.type);
+                    dayElement.classList.add('highlighted');
+                    if (importantDate.subject === 'Mock') {
+                        dayElement.classList.add('mock');
+                    } else {
+                        dayElement.setAttribute('data-subject', importantDate.subject);
+                    }
+                    
+                    // Find all events for this date
+                    const allEventsForDate = importantDates.filter(date => 
+                        date.date.toDateString() === currentDateString
+                    );
+                    
+                    // Create tooltip with subject (for Mock) or details (for Finals)
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'date-tooltip';
+                    tooltip.innerHTML = allEventsForDate.map(event => {
+                        if (event.date >= new Date(2025, 3, 29)) { // April 29th and after are Finals
+                            return `<div>${event.details}</div>`;
+                        } else {
+                            return `<div>${event.subject}</div>`;
+                        }
+                    }).join('');
+                    dayElement.appendChild(tooltip);
                 }
 
                 calendarDays.appendChild(dayElement);
             }
-        }
-
-        function createDayElement(content, disabled = false) {
-            const element = document.createElement('div');
-            element.className = `calendar-day${disabled ? ' disabled' : ''}`;
-            element.textContent = content;
-            return element;
         }
 
         function changeMonth(delta) {
@@ -400,11 +567,46 @@
             generateCalendar(currentYear, currentMonth);
         }
 
+        // Add touch event handling
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        function initializeSwipeEvents() {
+            const calendarContainer = document.querySelector('.calendar-container');
+            
+            calendarContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+            }, false);
+
+            calendarContainer.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+            }, false);
+
+            calendarContainer.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].clientX;
+                handleSwipe();
+            }, false);
+        }
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const swipeDistance = touchEndX - touchStartX;
+            
+            if (Math.abs(swipeDistance) > swipeThreshold) {
+                if (swipeDistance > 0) {
+                    changeMonth(-1);
+                } else {
+                    changeMonth(1);
+                }
+            }
+        }
+
         // Initialize
         window.addEventListener('load', () => {
             generateCalendar(currentYear, currentMonth);
             updateCountdown();
             setInterval(updateCountdown, 60000);
+            initializeSwipeEvents();
         });
     </script>
 </body>
